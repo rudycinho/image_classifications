@@ -2,6 +2,8 @@ from flask import Flask, jsonify, request
 from flask_restful import Api, Resource
 from pymongo import MongoClient
 import bcrypt
+import numpy
+import tensorflow as tf
 import requests
 import subprocess
 import json
@@ -39,14 +41,11 @@ class Register(Resource):
             "tokens":4
         })
 
-        ret_json = {
-            "status":200,
-            "msg":"You successfully signed up for this API"
-        }
+        return generate_return_dictionary(200,"You successfully signed up for this API")
 
 def generate_return_dictionary(status,msg):
     ret_json = {
-        "status":staticmethod,
+        "status":status,
         "msg":msg
     }
     return ret_json
@@ -56,9 +55,9 @@ def verify_pw(username, password):
         return False
     hashed_pw = users.find({
         "username":username
-    })[0]["Password"]
+    })[0]["password"]
 
-    return bcrypt.hashedpw(password.encode('utf8'),hashed_pw)==hashed_pw
+    return bcrypt.hashpw(password.encode('utf8'),hashed_pw)==hashed_pw
 
 def verify_credentials(username, password):
     if not user_exists(username):
@@ -94,7 +93,7 @@ class Classify(Resource):
 
         with open("temp.jpg","wb") as f:
             f.write(r.content)
-            proc = subprocess.Popen('python classify_image.py --model_dir=. --image_file=./temp.jpg')
+            proc = subprocess.Popen('python classify_image.py --model_dir=. --image_file=./temp.jpg', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
             proc.communicate()[0]
             proc.wait()
             with open('text.txt') as g:
@@ -107,8 +106,11 @@ class Classify(Resource):
                 "tokens":tokens-1
             }
         })
+        
         return ret_json
 
+api.add_resource(Register,'/register')
+api.add_resource(Classify,'/classify')
 
-
-
+if __name__=="__main__":
+    app.run(host='0.0.0.0')
